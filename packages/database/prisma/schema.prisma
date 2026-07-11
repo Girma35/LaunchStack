@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+  BILLING
+}
+
+enum ApiKeyScope {
+  READ
+  WRITE
+  ADMIN
+}
+
+model User {
+  id                   String        @id @default(cuid())
+  email                String        @unique
+  name                 String?
+  image                String?
+  emailVerifiedAt      DateTime?
+  passwordHash         String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  sessions             Session[]
+  accounts             Account[]
+  memberships          Membership[]
+  invitationsSent      Invitation[]  @relation("InvitationInviter")
+  apiKeys              ApiKey[]
+  conversations        Conversation[]
+  promptTemplates      PromptTemplate[]
+  featureFlagOverrides FeatureFlagOverride[]
+  auditLogs            AuditLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerId          String
+  providerAccountId   String
+  accessToken         String?
+  refreshToken        String?
+  accessTokenExpiresAt DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([providerId, providerAccountId])
+}
+
+model Organization {
+  id                  String         @id @default(cuid())
+  slug                String         @unique
+  name                String
+  logoUrl             String?
+  stripeCustomerId    String?        @unique
+  stripeSubscriptionId String?       @unique
+  plan                String         @default("free")
+  usageCurrentMonth   Int            @default(0)
+  usageLimit          Int            @default(1000)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  memberships         Membership[]
+  invitations         Invitation[]
+  apiKeys             ApiKey[]
+  featureFlags        FeatureFlag[]
+  featureFlagOverrides FeatureFlagOverride[]
+  auditLogs           AuditLog[]
+  conversations       Conversation[]
+  documents           Document[]
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([userId, organizationId])
+}
+
+model Invitation {
+  id             String         @id @default(cuid())
+  email          String
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole
+  token          String         @unique
+  expiresAt      DateTime
+  inviterId      String
+  inviter        User           @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  acceptedAt     DateTime?
+  createdAt      DateTime       @default(now())
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model RolePermission {
+  id             String         @id @default(cuid())
+  role           MembershipRole
+  permissionKey  String
+
+  @@unique([role, permissionKey])
+}
+
+model ApiKey {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  prefix         String       @unique
+  hashedKey      String
+  scope          ApiKeyScope
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  requestLogs    ApiRequestLog[]
+}
+
+model ApiRequestLog {
+  id        String   @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  route     String
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyId, createdAt])
+}
+
+model FeatureFlag {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  enabled        Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, key])
+}
+
+model FeatureFlagOverride {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key            String
+  enabled        Boolean
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId, key])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  targetType     String
+  targetId       String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+}
+
+model Conversation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  model          String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  messages       Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  tokens         Int?
+  createdAt      DateTime     @default(now())
+}
+
+model PromptTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedById   String
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  key            String       @unique
+  mimeType       String
+  sizeBytes      Int
+  createdAt      DateTime     @default(now())
+  embedding      Unsupported("vector")?
+}

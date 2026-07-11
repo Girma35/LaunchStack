@@ -1,0 +1,17 @@
+{
+  "name": "@launchstack/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@launchstack/database": "workspace:*",
+    "@launchstack/shared": "workspace:*",
+    "better-auth": "^1.1.13",
+    "zod": "^3.24.1"
+  }
+}

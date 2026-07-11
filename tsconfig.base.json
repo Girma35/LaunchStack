@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@launchstack/shared/*": ["packages/shared/src/*"],
+      "@launchstack/config/*": ["packages/config/src/*"],
+      "@launchstack/database/*": ["packages/database/src/*"],
+      "@launchstack/permissions/*": ["packages/permissions/src/*"],
+      "@launchstack/auth/*": ["packages/auth/src/*"],
+      "@launchstack/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}
